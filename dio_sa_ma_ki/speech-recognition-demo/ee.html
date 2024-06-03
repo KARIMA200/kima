@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recherche Vocale</title>
+</head>
+<body>
+    <form id="search-form">
+        <input type="text" id="search-input" placeholder="Tapez votre recherche...">
+        <button type="button" id="voice-btn">🎤</button>
+        <input type="submit" value="Rechercher">
+    </form>
+
+    <script src="app.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('search-input');
+        const voiceBtn = document.getElementById('voice-btn');
+    
+        if ('webkitSpeechRecognition' in window) {
+            console.log('La reconnaissance vocale est prise en charge dans ce navigateur');
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'fr-FR';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+    
+            recognition.onresult = function(event) {
+                const speechResult = event.results[0][0].transcript;
+                console.log('Résultat de la reconnaissance vocale:', speechResult);
+                searchInput.value = speechResult;
+            };
+    
+            recognition.onerror = function(event) {
+                console.error('Erreur de reconnaissance vocale:', event.error);
+            };
+    
+            voiceBtn.addEventListener('click', () => {
+                console.log('Bouton de la voix cliqué, démarrage de la reconnaissance vocale...');
+                recognition.start();
+            });
+        } else {
+            console.log('La reconnaissance vocale n\'est pas prise en charge dans ce navigateur');
+            voiceBtn.disabled = true;
+        }
+    });
+</script> 
+</body>   
+</body>
+</html>

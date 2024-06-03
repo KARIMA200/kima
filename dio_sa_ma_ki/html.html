@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enregistrement vocal</title>
+<link rel="stylesheet" href="css/all.min.css">
+<style>
+    .recording {
+        background-color: #f0f0f0;
+        padding: 5px 10px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+    .delete-icon {
+        color: red;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+
+<i id="startRecording" class="fas fa-microphone"></i>
+<button id="sendRecording">Send Recording</button>
+<div id="recordingsList"></div>
+
+<script>
+let mediaRecorder;
+let recordedChunks = [];
+let isRecording = false;
+
+document.getElementById('startRecording').addEventListener('click', function() {
+    if (!isRecording) {
+        startRecording();
+    } else {
+        stopRecording();
+    }
+});
+
+document.getElementById('sendRecording').addEventListener('click', sendRecording);
+
+function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function(stream) {
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+
+            isRecording = true;
+            document.getElementById('startRecording').classList.add('recording');
+            document.getElementById('startRecording').classList.remove('fa-microphone');
+            document.getElementById('startRecording').classList.add('fa-stop');
+
+            mediaRecorder.addEventListener('dataavailable', function(event) {
+                recordedChunks.push(event.data);
+            });
+
+            mediaRecorder.addEventListener('stop', function() {
+                isRecording = false;
+                document.getElementById('startRecording').classList.remove('recording');
+                document.getElementById('startRecording').classList.add('fa-microphone');
+                document.getElementById('startRecording').classList.remove('fa-stop');
+
+                let blob = new Blob(recordedChunks, { type: 'audio/wav' });
+                let url = URL.createObjectURL(blob);
+                let audio = document.createElement('audio');
+                audio.controls = true;
+                audio.src = url;
+
+                // Créer un élément pour chaque enregistrement avec une icône de poubelle
+                let recordingItem = document.createElement('div');
+                recordingItem.classList.add('recording-item');
+                recordingItem.appendChild(audio);
+                
+                let deleteIcon = document.createElement('i');
+                deleteIcon.classList.add('fas', 'fa-trash', 'delete-icon');
+                deleteIcon.addEventListener('click', function() {
+                    // Supprimer l'enregistrement de la liste
+                    recordingItem.remove();
+                });
+                recordingItem.appendChild(deleteIcon);
+
+                document.getElementById('recordingsList').appendChild(recordingItem);
+            });
+        });
+}
+
+function stopRecording() {
+    mediaRecorder.stop();
+}
+
+function sendRecording() {
+    if (recordedChunks.length === 0) {
+        alert("No recording to send!");
+        return;
+    }
+
+    let blob = new Blob(recordedChunks, { type: 'audio/wav' });
+
+    let formData = new FormData();
+    formData.append('audio', blob, 'recording.wav');
+
+    let xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+            if (xhr.status === 200) {
+                let filePath = xhr.responseText;
+                console.log("File path:", filePath);
+                // Stocker le chemin du fichier dans une variable ou effectuer d'autres actions nécessaires
+            } else {
+                console.error('Error:', xhr.status);
+            }
+        }
+    };
+
+    xhr.open('POST', 'upload.php', true);
+    xhr.send(formData);
+}
+</script>
+
+</body>
+</html>

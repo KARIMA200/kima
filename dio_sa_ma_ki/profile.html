@@ -1,0 +1,117 @@
+<?php
+session_start();
+
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Vérifier si l'email est défini dans la session
+if (!isset($_SESSION['email'])) {
+    die("Email non défini dans la session");
+}
+
+$email = $_SESSION['email'];
+
+// Rechercher dans la table vendeurs
+$sql_vendeur = "SELECT * FROM vendeurs WHERE email = ?";
+$stmt_vendeur = $conn->prepare($sql_vendeur);
+$stmt_vendeur->bind_param("s", $email);
+$stmt_vendeur->execute();
+$result_vendeur = $stmt_vendeur->get_result();
+
+// Rechercher dans la table clients si pas trouvé dans vendeurs
+$sql_client = "SELECT * FROM clients WHERE email = ?";
+$stmt_client = $conn->prepare($sql_client);
+$stmt_client->bind_param("s", $email);
+$stmt_client->execute();
+$result_client = $stmt_client->get_result();
+
+$user = null;
+
+if ($result_vendeur->num_rows > 0) {
+    $user = $result_vendeur->fetch_assoc();
+} elseif ($result_client->num_rows > 0) {
+    $user = $result_client->fetch_assoc();
+} else {
+    die("Utilisateur non trouvé");
+}
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifier Profil</title>
+    <style>
+        /* Style pour le conteneur de modification de profil */
+        .profile-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 300px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+        }
+        .profile-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+        .change-image-button,
+        .modify-info-button {
+            background-color: #4bcdA2;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-bottom: 10px;
+        }
+        .change-image-button:hover,
+        .modify-info-button:hover {
+            background-color: #3ba88e;
+        }
+        .profile-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <img src="<?php echo $user['image']; ?>" alt="Profile Image" class="profile-image">
+        <button class="change-image-button" onclick="alert('Changer l\'image de profil')">Changer l'image</button>
+        <form class="profile-form" action="modifier_info.php" method="POST">
+            <input type="text" name="nom" value="<?php echo $user['nom']; ?>" placeholder="Nom">
+            <input type="text" name="prenom" value="<?php echo $user['prenom']; ?>" placeholder="Prénom">
+            <input type="email" name="email" value="<?php echo $user['email']; ?>" placeholder="Email" readonly>
+            <input type="password" name="motdepasse" placeholder="Mot de passe">
+            <button type="submit" class="modify-info-button">Modifier info</button>
+        </form>
+    </div>
+</body>
+</html>
+
+<?php
+$conn->close();
+?>

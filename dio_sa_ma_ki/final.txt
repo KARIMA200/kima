@@ -1,0 +1,1637 @@
+C:\xampp\htdocs\ecommerce\add-to-cart.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Définition des valeurs par défaut pour le filtrage
+$categorie = isset($_GET['categorie']) ? $_GET['categorie'] : 'tous';
+$prix = isset($_GET['prix']) ? $_GET['prix'] : 'tous';
+
+// Construire la requête SQL en fonction des valeurs de filtrage
+$sql = "SELECT * FROM produits WHERE 1 ";
+
+if ($categorie != 'tous') {
+    $sql .= " AND categorie = '$categorie'";
+}
+
+if ($prix != 'tous') {
+    switch ($prix) {
+        case '0-20':
+            $sql .= " AND prix BETWEEN 0 AND 20";
+            break;
+        case '20-50':
+            $sql .= " AND prix BETWEEN 20 AND 50";
+            break;
+        case '50-100':
+            $sql .= " AND prix BETWEEN 50 AND 100";
+            break;
+        case 'plus':
+            $sql .= " AND prix > 100";
+            break;
+    }
+}
+
+// Exécuter la requête SQL pour récupérer les produits filtrés
+$result = $conn->query($sql);
+
+// Vérifier s'il y a des produits à afficher
+if ($result->num_rows > 0) {
+    // Afficher les produits
+    while ($row = $result->fetch_assoc()) {
+        // Affichage de chaque produit
+        echo "<div class='product'>";
+        echo "<img src='{$row['image']}' alt='{$row['nom_produit']}'>";
+        echo "<h3>{$row['nom_produit']}</h3>";
+        echo "<p>{$row['description']}</p>";
+        echo "<p>Prix: {$row['prix']}€</p>";
+        echo "<form action='ajouter_panier.php' method='post'>";
+        echo "<input type='hidden' name='product_id' value='{$row['id']}'>";
+        echo "<button type='submit'>Ajouter au panier</button>";
+        echo "</form>";
+        echo "</div>";
+    }
+} else {
+    // Si aucun produit n'est trouvé
+    echo "Aucun produit trouvé.";
+}
+
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\add_produit.html:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter Produit</title>
+</head>
+<body>
+    <h2>Ajouter un Nouveau Produit</h2>
+    <form action="add_produit.php" method="post" enctype="multipart/form-data">
+        <label for="nom_produit">Nom du Produit:</label><br>
+        <input type="text" id="nom_produit" name="nom_produit"><br>
+        <label for="description_produit">Description du Produit:</label><br>
+        <textarea id="description_produit" name="description_produit"></textarea><br>
+        <label for="prix_produit">Prix du Produit:</label><br>
+        <input type="text" id="prix_produit" name="prix_produit"><br><br>
+        <!-- Champ de sélection des catégories -->
+        <label for="categorie">Catégorie du Produit:</label><br>
+        <select id="categorie" name="categorie">
+            <option value="vetements">Vêtements</option>
+            <option value="chaussures">Chaussures</option>
+            <option value="accessoires">Accessoires</option>
+            <option value="electroniques">Électroniques</option>
+            <option value="maison">Maison</option>
+            <option value="jouets">Jouets</option>
+            <option value="beaute">Beauté</option>
+            <option value="sports">Sports</option>
+            <option value="livres">Livres</option>
+            <option value="musique">Musique</option>
+            <option value="films">Films</option>
+            <option value="jeux">Jeux</option>
+            <option value="alimentation">Alimentation</option>
+            <option value="boissons">Boissons</option>
+            <option value="artisanat">Artisanat</option>
+        </select><br><br>
+        <!-- Champ de sélection du prix -->
+      
+ 
+        <label for="image">Image du Produit:</label><br>
+        <input type="file" id="image" name="image"><br><br>
+        <input type="submit" value="Ajouter le Produit">
+    </form>
+</body>
+</html>
+
+
+C:\xampp\htdocs\ecommerce\add_produit.php:
+<?php
+// Vérifiez si le formulaire est soumis
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Récupérez les données du formulaire
+    $nom_produit = $_POST['nom_produit'];
+    $description_produit = $_POST['description_produit'];
+    $prix_produit = $_POST['prix_produit'];
+   
+    // Connexion à la base de données
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "ecommerce";
+
+    $conn = new mysqli($servername, $username, $password, $dbname);
+
+    // Vérification de la connexion
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    // Vérifier si le fichier a été correctement envoyé
+    if(isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        // Récupérer le nom du fichier
+        $image_name = $_FILES['image']['name'];
+        // Définir le chemin de destination pour enregistrer l'image
+        $upload_directory = "image/"; // Choisissez le répertoire où vous souhaitez enregistrer les images
+        // Déplacer le fichier téléchargé vers le répertoire de destination
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_directory . $image_name)) {
+            // Requête SQL pour insérer le produit dans la table produits
+            $sql = "INSERT INTO produits (nom, description, prix, image) VALUES (?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("ssss", $nom_produit, $description_produit, $prix_produit, $image_name); // Stocker le nom du fichier dans la base de données
+            $stmt->execute();
+
+            // Vérifier si l'insertion a réussi
+            if ($stmt->affected_rows > 0) {
+                echo "Nouveau produit ajouté avec succès.";
+            } else {
+                echo "Erreur lors de l'ajout du produit: " . $conn->error;
+            }
+
+            // Fermer la connexion à la base de données
+            $stmt->close();
+        } else {
+            echo "Une erreur s'est produite lors de l'enregistrement de l'image.";
+        }
+    } else {
+        echo "Une erreur s'est produite lors du téléchargement de l'image.";
+    }
+
+    $conn->close();
+} else {
+    // Si le formulaire n'est pas soumis, redirigez l'utilisateur vers une autre page ou affichez un message d'erreur
+    echo "Le formulaire n'a pas été soumis.";
+}
+?>
+
+
+C:\xampp\htdocs\ecommerce\afficher_image.php:
+<?php
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Récupérer l'ID du produit depuis l'URL
+
+
+// Préparer et exécuter la requête pour récupérer le chemin de l'image du produit
+$sql = "SELECT image FROM produits WHERE ;
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $product_id);
+$stmt->execute();
+$stmt->store_result();
+// Vérifier s'il y a une image pour ce produit
+if ($stmt->num_rows > 0) {
+    // Récupérer le chemin de l'image
+    $stmt->bind_result($image_path);
+    $stmt->fetch();
+    
+    // Vérifier si le fichier image existe
+    if (file_exists($image_path)) {
+        // Afficher l'image
+        header("Content-type: image/jpeg"); // Indique que le contenu est une image JPEG
+        readfile($image_path);
+    } else {
+        // Si l'image n'existe pas, afficher une image par défaut ou un message d'erreur
+        // Exemple avec une image par défaut :
+        $default_image_path = "image/default.jpg";
+        if (file_exists($default_image_path)) {
+            header("Content-type: image/jpeg");
+            readfile($default_image_path);
+        } else {
+            echo "Image par défaut introuvable.";
+        }
+    }
+} else {
+    // Si aucune image n'est trouvée, afficher une image par défaut ou un message d'erreur
+    // Exemple avec une image par défaut :
+    $default_image_path = "image/default.jpg";
+    if (file_exists($default_image_path)) {
+        header("Content-type: image/jpeg");
+        readfile($default_image_path);
+    } else {
+        echo "Image par défaut introuvable.";
+    }
+}
+
+// Fermer la requête préparée
+$stmt->close();
+
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\ajouter_panier.php:
+<?php
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Traitement des données de formulaire
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Vérifier si l'identifiant du produit a été envoyé
+    if (isset($_POST['product_id'])) {
+        $product_id = $_POST['product_id'];
+
+        // Récupérer l'email de l'utilisateur depuis la variable de session
+        session_start();
+        $email = $_SESSION['email'];
+
+        // Requête pour obtenir l'ID du client à partir de son email
+        $sql_client_id = "SELECT id FROM clients WHERE email = ?";
+        $stmt_client_id = $conn->prepare($sql_client_id);
+        $stmt_client_id->bind_param("s", $email);
+        $stmt_client_id->execute();
+        $result_client_id = $stmt_client_id->get_result();
+
+        if ($result_client_id->num_rows > 0) {
+            // Récupération de l'ID du client
+            $row = $result_client_id->fetch_assoc();
+            $client_id = $row["id"];
+
+            // Vérifier si le produit existe déjà dans le panier du client
+            $sql_check_product = "SELECT id FROM panier WHERE product_id = ? AND user_id = ?";
+            $stmt_check_product = $conn->prepare($sql_check_product);
+            $stmt_check_product->bind_param("ii", $product_id, $client_id);
+            $stmt_check_product->execute();
+            $result_check_product = $stmt_check_product->get_result();
+
+            if ($result_check_product->num_rows > 0) {
+                // Le produit existe déjà dans le panier du client
+                echo "Ce produit est déjà dans votre panier.";
+            } else {
+                // Le produit n'existe pas encore dans le panier du client, l'ajouter
+                $sql_insert_panier = "INSERT INTO panier (product_id, user_id) VALUES (?, ?)";
+                $stmt = $conn->prepare($sql_insert_panier);
+
+                if ($stmt) {
+                    // Liaison des paramètres
+                    $stmt->bind_param("ii", $product_id, $client_id);
+
+                    // Exécution de la requête
+                    if ($stmt->execute()) {
+                        echo "Le produit a été ajouté au panier avec succès.";
+                    } else {
+                        echo "Erreur lors de l'ajout du produit au panier : " . $stmt->error;
+                    }
+
+                    // Fermer la requête préparée
+                    $stmt->close();
+                } else {
+                    echo "Erreur de préparation de la requête : " . $conn->error;
+                }
+            }
+        } else {
+            echo "Aucun client trouvé avec cet email : $email";
+        }
+    }
+}
+
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\connexion..txt:
+
+
+C:\xampp\htdocs\ecommerce\connexion.html:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion</title>
+</head>
+<body>
+    <h2>Connexion</h2>
+    <form action="connexion.php" method="post">
+        <div>
+            <label for="email">Nom d'utilisateur:</label>
+            <input type="text" id="email" name="email" required>
+        </div>
+        <div>
+            <label for="password">Mot de passe:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit">Se connecter</button>
+    </form>
+</body>
+</html>
+
+
+C:\xampp\htdocs\ecommerce\connexion.php:
+<?php
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Traitement des données de formulaire
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $email = $_POST['email'];
+    $password = $_POST['password'];
+
+    // Vérification dans la table clients
+    $sql_clients = "SELECT * FROM clients WHERE email='$email' AND password='$password'";
+    $result_clients = $conn->query($sql_clients);
+
+
+    
+
+    if ($result_clients->num_rows > 0) {
+        
+// Démarrez la session
+session_start();
+
+// Stockez l'email dans une variable de session
+$_SESSION['email'] = $email;
+
+// Redirigez l'utilisateur vers la page d'accueil appropriée
+header('Location: page_acceuilC.php');
+exit();
+
+
+        // Utilisateur trouvé dans la table clients, redirection vers la page d'accueil client
+        header('Location: page_acceuilC.php');
+        exit(); // Assure que le script s'arrête après la redirection
+    }
+
+    // Vérification dans la table vendeurs
+    $sql_vendeurs = "SELECT * FROM vendeurs WHERE email='$email' AND password='$password'";
+    $result_vendeurs = $conn->query($sql_vendeurs);
+
+    if ($result_vendeurs->num_rows > 0) {
+        // Utilisateur trouvé dans la table vendeurs, redirection vers la page d'accueil vendeur
+        header('Location: page_acceuilV.php');
+        exit(); // Assure que le script s'arrête après la redirection
+    }
+    // Si les informations de connexion ne correspondent à aucun enregistrement dans les tables clients et vendeurs
+    echo "Adresse e-mail ou mot de passe incorrect.";
+}
+
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\diosa.exe:
+Could not read file diosa.exe. Reason: 'utf-8' codec can't decode byte 0x90 in position 2: invalid start byte
+
+C:\xampp\htdocs\ecommerce\diosa.jpg:
+Could not read file diosa.jpg. Reason: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\filtrer.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Récupérer les valeurs de filtrage depuis le formulaire
+$categorie = isset($_POST['categorie']) ? $_POST['categorie'] : 'tous';
+$prix = isset($_POST['prix']) ? $_POST['prix'] : 'tous';
+
+// Construire la requête SQL en fonction des valeurs de filtrage
+$sql = "SELECT * FROM produits WHERE 1 ";
+
+if ($categorie != 'tous') {
+    $sql .= " AND categorie = '$categorie'";
+}
+
+if ($prix != 'tous') {
+    switch ($prix) {
+        case '0-50':
+            $sql .= " AND prix BETWEEN 0 AND 50";
+            break;
+        case '51-100':
+            $sql .= " AND prix BETWEEN 51 AND 100";
+            break;
+        case '101-150':
+            $sql .= " AND prix BETWEEN 101 AND 150"; // Modification de la plage de prix
+            break;
+        case '151-200':
+            $sql .= " AND prix BETWEEN 151 AND 200"; // Modification de la plage de prix
+            break;
+        case '201-250':
+            $sql .= " AND prix BETWEEN 201 AND 250"; // Modification de la plage de prix
+            break;
+        case '251-300':
+            $sql .= " AND prix BETWEEN 251 AND 300"; // Modification de la plage de prix
+            break;
+        case '301-350':
+            $sql .= " AND prix BETWEEN 301 AND 350"; // Modification de la plage de prix
+            break;
+        case 'plus':
+            $sql .= " AND prix > 350"; // Modification pour prendre en compte la catégorie "plus"
+            break;
+    }
+}
+
+// Exécuter la requête SQL pour récupérer les produits filtrés
+$result = $conn->query($sql);
+
+// Vérifier s'il y a des produits à afficher
+if ($result->num_rows > 0) {
+    // Afficher les produits
+    while ($row = $result->fetch_assoc()) {
+        // Affichage de chaque produit
+        echo "<div class='product'>";
+        echo "<img src='{$row['image']}' alt='{$row['nom']}'>";
+        echo "<h3>{$row['nom']}</h3>";
+        echo "<p>{$row['description']}</p>";
+        echo "<p>Prix: {$row['prix']}€</p>";
+        echo "<form action='ajouter_panier.php' method='post'>";
+        echo "<input type='hidden' name='product_id' value='{$row['id']}'>";
+        echo "<button type='submit'>Ajouter au panier</button>";
+        echo "</form>";
+        echo "</div>";
+    }
+} else {
+    // Si aucun produit n'est trouvé
+    echo "Aucun produit trouvé.";
+}
+
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\final.txt:
+C:\xampp\htdocs\ecommerce\add-to-cart.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Définition des valeurs par défaut pour le filtrage
+$categorie = isset($_GET['categorie']) ? $_GET['categorie'] : 'tous';
+$prix = isset($_GET['prix']) ? $_GET['prix'] : 'tous';
+
+// Construire la requête SQL en fonction des valeurs de filtrage
+$sql = "SELECT * FROM produits WHERE 1 ";
+
+if ($categorie != 'tous') {
+    $sql .= " AND categorie = '$categorie'";
+}
+
+if ($prix != 'tous') {
+    switch ($prix) {
+        case '0-20':
+            $sql .= " AND prix BETWEEN 0 AND 20";
+            break;
+        case '20-50':
+            $sql .= " AND prix BETWEEN 20 AND 50";
+            break;
+        case '50-100':
+            $sql .= " AND prix BETWEEN 50 AND 100";
+            break;
+        case 'plus':
+            $sql .= " AND prix > 100";
+            break;
+    }
+}
+
+// Exécuter la requête SQL pour récupérer les produits filtrés
+$result = $conn->query($sql);
+
+// Vérifier s'il y a des produits à afficher
+if ($result->num_rows > 0) {
+    // Afficher les produits
+    while ($row = $result->fetch_assoc()) {
+        // Affichage de chaque produit
+        echo "<div class='product'>";
+        echo "<img src='{$row['image']}' alt='{$row['nom_produit']}'>";
+        echo "<h3>{$row['nom_produit']}</h3>";
+        echo "<p>{$row['description']}</p>";
+        echo "<p>Prix: {$row['prix']}€</p>";
+        echo "<form action='ajouter_panier.php' method='post'>";
+        echo "<input type='hidden' name='product_id' value='{$row['id']}'>";
+        echo "<button type='submit'>Ajouter au panier</button>";
+        echo "</form>";
+        echo "</div>";
+    }
+} else {
+    // Si aucun produit n'est trouvé
+    echo "Aucun produit trouvé.";
+}
+
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\add_produit.html:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter Produit</title>
+</head>
+<body>
+    <h2>Ajouter un Nouveau Produit</h2>
+    <form action="add_produit.php" method="post" enctype="multipart/form-data">
+        <label for="nom_produit">Nom du Produit:</label><br>
+        <input type="text" id="nom_produit" name="nom_produit"><br>
+        <label for="description_produit">Description du Produit:</label><br>
+        <textarea id="description_produit" name="description_produit"></textarea><br>
+        <label for="prix_produit">Prix du Produit:</label><br>
+        <input type="text" id="prix_produit" name="prix_produit"><br><br>
+        <!-- Champ de sélection des catégories -->
+        <label for="categorie">Catégorie du Produit:</label><br>
+        <select id="categorie" name="categorie">
+            <option value="vetements">Vêtements</option>
+            <option value="chaussures">Chaussures</option>
+            <option value="accessoires">Accessoires</option>
+            <option value="electroniques">Électroniques</option>
+            <option value="maison">Maison</option>
+            <option value="jouets">Jouets</option>
+            <option value="beaute">Beauté</option>
+            <option value="sports">Sports</option>
+            <option value="livres">Livres</option>
+            <option value="musique">Musique</option>
+            <option value="films">Films</option>
+            <option value="jeux">Jeux</option>
+            <option value="alimentation">Alimentation</option>
+            <option value="boissons">Boissons</option>
+            <option value="artisanat">Artisanat</option>
+        </select><br><br>
+        <!-- Champ de sélection du prix -->
+      
+ 
+        <label for="image">Image du Produit:</label><br>
+        <input type="file" id="image" name="image"><br><br>
+        <input type="submit" value="Ajouter le Produit">
+    </form>
+</body>
+</html>
+
+
+C:\xampp\htdocs\ecommerce\add_produit.php:
+<?php
+// Vérifiez si le formulaire est soumis
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Récupérez les données du formulaire
+    $nom_produit = $_POST['nom_produit'];
+    $description_produit = $_POST['description_produit'];
+    $prix_produit = $_POST['prix_produit'];
+   
+    // Connexion à la base de données
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "ecommerce";
+
+    $conn = new mysqli($servername, $username, $password, $dbname);
+
+    // Vérification de la connexion
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    // Vérifier si le fichier a été correctement envoyé
+    if(isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        // Récupérer le nom du fichier
+        $image_name = $_FILES['image']['name'];
+        // Définir le chemin de destination pour enregistrer l'image
+        $upload_directory = "image/"; // Choisissez le répertoire où vous souhaitez enregistrer les images
+        // Déplacer le fichier téléchargé vers le répertoire de destination
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_directory . $image_name)) {
+            // Requête SQL pour insérer le produit dans la table produits
+            $sql = "INSERT INTO produits (nom, description, prix, image) VALUES (?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("ssss", $nom_produit, $description_produit, $prix_produit, $image_name); // Stocker le nom du fichier dans la base de données
+            $stmt->execute();
+
+            // Vérifier si l'insertion a réussi
+            if ($stmt->affected_rows > 0) {
+                echo "Nouveau produit ajouté avec succès.";
+            } else {
+                echo "Erreur lors de l'ajout du produit: " . $conn->error;
+            }
+
+            // Fermer la connexion à la base de données
+            $stmt->close();
+        } else {
+            echo "Une erreur s'est produite lors de l'enregistrement de l'image.";
+        }
+    } else {
+        echo "Une erreur s'est produite lors du téléchargement de l'image.";
+    }
+
+    $conn->close();
+} else {
+    // Si le formulaire n'est pas soumis, redirigez l'utilisateur vers une autre page ou affichez un message d'erreur
+    echo "Le formulaire n'a pas été soumis.";
+}
+?>
+
+
+C:\xampp\htdocs\ecommerce\afficher_image.php:
+
+
+C:\xampp\htdocs\ecommerce\get_products.php:
+<?php
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Échec de la connexion à la base de données: " . $conn->connect_error);
+}
+
+
+$sql = "SELECT * FROM produits";
+$result = $conn->query($sql);
+
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        echo "<div>";
+        echo "<h3>" . $row["nom"] . "</h3>";
+        echo "<p>" . $row["description"] . "</p>";
+        echo "<p>Prix: " . $row["prix"] . "</p>";
+        echo "<button class='add_to_cart' data-id='" . $row["id"] . "'>Ajouter au panier</button>";
+        echo "</div>";
+    }
+} else {
+    echo "Aucun produit trouvé.";
+}
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\index.html:
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page d'accueil</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        
+        header {
+            background-color: #333;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 3px solid #4285f4;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 3rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        p {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: row;
+        }
+
+        nav {
+            background-color: #4285f4;
+            color: #fff;
+            padding: 20px 20px 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #fbbc05;
+            align-items: flex-start; /* Alignement des éléments sur le côté gauche */
+            margin-right: 20px;
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            padding: 10px;
+            transition: background-color 0.3s ease;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        nav a:hover {
+            background-color: #3b79e3;
+        }
+        
+        .video-section {
+            flex: 1;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-right: 20px;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 aspect ratio */
+        }
+        
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+        }
+        
+        footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            border-top: 3px solid #34a853;
+            margin-top: auto; /* Alignement du pied de page en bas de la page */
+        }
+        
+        footer a {
+            color: #fff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Nom du Site</h1>
+        <p>Bienvenue sur notre site innovant</p>
+    </header>
+    <div class="container">
+        <nav>
+            <a href="connexion.html">Se connecter</a>
+            <a href="inscription.html">S'inscrire</a>
+        </nav>
+        <section class="video-section">
+            <div class="video-container">
+                <iframe src="https://www.youtube.com/embed/oOT3HdfjG_k?autoplay=1&loop=1&mute=1&controls=0&showinfo=0&modestbranding=1" allowfullscreen></iframe>
+            </div>
+        </section>
+    </div>
+    <footer>
+        <p>Contactez-nous : <a href="mailto:contact@example.com">contact@example.com</a></p>
+    </footer>
+</body>
+</html>
+
+
+C:\xampp\htdocs\ecommerce\inscription.html:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription</title>
+    
+</head>
+<body>
+
+<h2>Inscription</h2>
+
+<form id="inscriptionForm" action="inscription.php" method="post">
+    <label for="nom">Nom:</label>
+    <input type="text" id="nom" name="nom" required><br><br>
+
+    <label for="prenom">Prénom:</label>
+    <input type="text" id="prenom" name="prenom" required><br><br>
+
+    <label for="pays">Pays:</label>
+    <input type="text" id="pays" name="pays" required><br><br>
+       
+
+    <label for="ville">Ville:</label>
+    <input type="text" id="ville" name="ville" required><br><br>
+        
+
+    <label for="adresse">Adresse:</label>
+    <input type="text" id="adresse" name="adresse" required><br><br>
+
+    <label for="telephone">Téléphone:</label>
+    <input type="number" id="telephone" name="telephone" required><br><br>
+    <label for="email">email:</label>
+    <input type="email" id="email" name="email" required><br><br>
+
+
+    <label for="password">Mot de passe:</label>
+    <input type="password" id="password" name="password" required><br><br>
+
+    <label>Type d'utilisateur:</label><br>
+    <input type="radio" id="client" name="type_utilisateur" value="client" checked>
+    <label for="client">Client</label><br>
+    <input type="radio" id="vendeur" name="type_utilisateur" value="vendeur">
+    <label for="vendeur">Vendeur</label><br><br>
+
+    <input type="checkbox" id="robot" name="robot" required>
+    <label for="robot">Je ne suis pas un robot</label><br><br>
+
+    <input type="submit" value="S'inscrire">
+</form>
+
+</body>
+</html>
+
+
+C:\xampp\htdocs\ecommerce\inscription.php:
+<?php
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Échec de la connexion à la base de données: " . $conn->connect_error);
+}
+
+// Récupération des données du formulaire
+$nom = $_POST['nom'];
+$prenom = $_POST['prenom'];
+$pays = $_POST['pays'];
+$ville = $_POST['ville'];
+$adresse = $_POST['adresse'];
+$telephone = $_POST['telephone'];
+$email= $_POST['email'];
+
+$password = $_POST['password'];
+$type_utilisateur = $_POST['type_utilisateur'];
+
+// Insertion des données dans la base de données en fonction du type d'utilisateur
+if ($type_utilisateur == 'client') {
+    $sql = "INSERT INTO clients (nom, prenom, pays, ville, adresse, telephone , email, password)
+            VALUES ('$nom', '$prenom', '$pays', '$ville', '$adresse', '$telephone', '$email', '$password')";
+           
+} elseif ($type_utilisateur == 'vendeur') {
+    $sql = "INSERT INTO vendeurs (nom, prenom, pays, ville, adresse, telephone, email, password)
+            VALUES ('$nom', '$prenom', '$pays', '$ville', '$adresse', '$telephone', '$email', '$password')";
+         
+}
+
+if ($conn->query($sql) === TRUE) {
+    echo "Inscription réussie!";
+} else {
+    echo "Erreur: " . $sql . "<br>" . $conn->error;
+}
+
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\modifier_produit.html:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifier Produit</title>
+</head>
+<body>
+    <h2>Modifier un Produit</h2>
+    <?php
+
+
+    if (isset($_POST['product_id'])) {
+        $product_id = $_POST['product_id'];
+
+        
+        $servername = "localhost";
+        $username = "root";
+        $password = "";
+        $dbname = "ecommerce";
+
+        $conn = new mysqli($servername, $username, $password, $dbname);
+
+      
+        if ($conn->connect_error) {
+            die("Connection failed: " . $conn->connect_error);
+        }
+
+   
+        $sql = "SELECT * FROM produits WHERE id = '$product_id'";
+        $result = $conn->query($sql);
+
+        if ($result->num_rows > 0) {
+           
+            $row = $result->fetch_assoc();
+            $nom_produit = $row['nom'];
+            $description_produit = $row['description'];
+            $prix_produit = $row['prix'];
+            ?>
+            <!-- Formulaire pré-rempli avec les informations du produit -->
+            <form action="modifier_produit.php" method="post">
+                <input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
+                <label for="nom_produit">Nom du Produit:</label><br>
+                <input type="text" id="nom_produit" name="nom_produit" value="<?php echo $nom_produit; ?>"><br>
+                <label for="description_produit">Description du Produit:</label><br>
+                <textarea id="description_produit" name="description_produit"><?php echo $description_produit; ?></textarea><br>
+                <label for="prix_produit">Prix du Produit:</label><br>
+                <input type="text" id="prix_produit" name="prix_produit" value="<?php echo $prix_produit; ?>"><br><br>
+                <input type="submit" value="Modifier le Produit">
+            </form>
+            <?php
+        } else {
+            echo "Aucun produit trouvé avec l'ID spécifié.";
+        }
+
+       
+        $conn->close();
+    } else {
+        echo "L'ID du produit à modifier n'est pas spécifié.";
+    }
+    ?>
+</body>
+</html>
+
+
+C:\xampp\htdocs\ecommerce\modifier_produit.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Récupérer l'identifiant du produit à modifier
+    $product_id = $_POST['product_id'];
+
+    // Récupérer les détails du produit depuis la base de données
+    $sql = "SELECT * FROM produits WHERE id = $product_id";
+    $result = $conn->query($sql);
+
+    if ($result->num_rows == 1) {
+        $row = $result->fetch_assoc();
+        // Afficher un formulaire pré-rempli avec les détails du produit
+        ?>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Modifier Produit</title>
+        </head>
+        <body>
+            <h2>Modifier Produit</h2>
+            <form action="traiter_modification.php" method="post">
+                <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                <label for="nom">Nom:</label>
+                <input type="text" id="nom" name="nom" value="<?php echo $row['nom']; ?>"><br><br>
+                <label for="description">Description:</label>
+                <textarea id="description" name="description"><?php echo $row['description']; ?></textarea><br><br>
+                <label for="prix">Prix:</label>
+                <input type="text" id="prix" name="prix" value="<?php echo $row['prix']; ?>"><br><br>
+             
+                <!-- Autres champs à modifier selon vos besoins -->
+                <button type="submit">Valider</button>
+            </form>
+        </body>
+        </html>
+        <?php
+    } else {
+        echo "Produit non trouvé.";
+    }
+} else {
+    echo "Méthode non autorisée.";
+}
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\page_acceuilC.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Récupérer tous les produits de la table produits
+$sql = "SELECT * FROM produits";
+$result = $conn->query($sql);
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des Produits</title>
+    <style>
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .product {
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            width: 200px;
+            text-align: center;
+        }
+        .product img {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h2>Liste des Produits</h2>
+    <form action="filtrer.php" method="post">
+        <div class="filter">
+            <label for="category">Filtrer par catégorie :</label>
+            
+                <select id="categorie" name="categorie">
+                    <option value="vetements">Vêtements</option>
+                    <option value="chaussures">Chaussures</option>
+                    <option value="accessoires">Accessoires</option>
+                    <option value="electroniques">Électroniques</option>
+                    <option value="maison">Maison</option>
+                    <option value="jouets">Jouets</option>
+                    <option value="beaute">Beauté</option>
+                    <option value="sports">Sports</option>
+                    <option value="livres">Livres</option>
+                    <option value="musique">Musique</option>
+                    <option value="films">Films</option>
+                    <option value="jeux">Jeux</option>
+                    <option value="alimentation">Alimentation</option>
+                    <option value="boissons">Boissons</option>
+                    <option value="artisanat">Artisanat</option>
+                </select>
+                <label for="prix">Prix du Produit:</label>
+                <select id="prix" name="prix">
+                    <option value="0-50">0 - 50</option>
+                    <option value="51-100">51 - 100</option>
+                    <option value="101-150">101 - 150</option>
+                    <option value="151-200">151 - 200</option>
+                    <option value="201-250">201 - 250</option>
+                    <option value="251-300">251 - 300</option>
+                    <option value="301-350">301 - 350</option>
+                    <option value="plus">Plus de 400</option>
+                </select>
+            <button type="submit" id="button">Filtrer</button>
+        </div>
+         <!-- Barre de panier -->
+ 
+    </form>
+    </form>
+    <form action="voir_panier.php" method="post" class="cart">
+        <button type="submit">Voir Panier</button>
+    </form>
+
+    <div class="container">
+        <?php
+        // Vérifier s'il y a des produits à afficher
+        if ($result->num_rows > 0) {
+            // Parcourir chaque produit
+            while($row = $result->fetch_assoc()) {
+                // Afficher les détails du produit
+                ?>
+                <div class="product">
+                    <?php
+                    // Chemin de l'image du produit
+                    $image_path = "image/" . $row['image']; 
+                    // Vérifier si le fichier image existe
+                    if (file_exists($image_path)) {
+                        // Vérifier si le fichier est lisible
+                        if (!is_readable($image_path)) {
+                            // Ajouter les droits de lecture
+                            chmod($image_path, 0644);
+                        }
+                        // Afficher l'image du produit
+                        echo '<img src="' . $image_path . '" alt="' . $row['nom'] . '">';
+                    } else {
+                        // Si le fichier n'existe pas, afficher une image par défaut
+                        echo '<img src="chemin_vers_image_par_defaut/default_image.jpg" alt="Image par défaut">';
+                    }
+                    ?>
+                    <h3><?php echo $row['nom']; ?></h3>
+                    <p><?php echo $row['description']; ?></p>
+                    <p>Prix: <?php echo $row['prix']; ?>€</p>
+                    <!-- Bouton d'ajout au panier -->
+                    <form action="ajouter_panier.php" method="post">
+                        <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                        <button type="submit">Ajouter au panier</button>
+                    </form>
+                    <!-- Boutons de modification et suppression -->
+                   
+                <?php
+            }
+        } else {
+            echo "Aucun produit trouvé.";
+        }
+        ?>
+    </div>
+</body>
+</html>
+
+<?php
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\page_acceuilV.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Récupérer tous les produits de la table produits
+$sql = "SELECT * FROM produits";
+$result = $conn->query($sql);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des Produits</title>
+    <style>
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .product {
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            width: 200px;
+            text-align: center;
+        }
+        .product img {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h2>Liste des Produits</h2>
+    <form action="filtrer.php" method="post">
+        <div class="filter">
+            <label for="category">Filtrer par catégorie :</label>
+            
+                <select id="categorie" name="categorie">
+                    <option value="vetements">Vêtements</option>
+                    <option value="chaussures">Chaussures</option>
+                    <option value="accessoires">Accessoires</option>
+                    <option value="electroniques">Électroniques</option>
+                    <option value="maison">Maison</option>
+                    <option value="jouets">Jouets</option>
+                    <option value="beaute">Beauté</option>
+                    <option value="sports">Sports</option>
+                    <option value="livres">Livres</option>
+                    <option value="musique">Musique</option>
+                    <option value="films">Films</option>
+                    <option value="jeux">Jeux</option>
+                    <option value="alimentation">Alimentation</option>
+                    <option value="boissons">Boissons</option>
+                    <option value="artisanat">Artisanat</option>
+                </select>
+                <label for="prix">Prix du Produit:</label>
+                <select id="prix" name="prix">
+                    <option value="0-50">0 - 50</option>
+                    <option value="51-100">51 - 100</option>
+                    <option value="101-150">101 - 150</option>
+                    <option value="151-200">151 - 200</option>
+                    <option value="201-250">201 - 250</option>
+                    <option value="251-300">251 - 300</option>
+                    <option value="301-350">301 - 350</option>
+                    <option value="plus">Plus de 400</option>
+                </select>
+            <button type="submit" id="button">Filtrer</button>
+        </div></form>
+        <form action="add_produit.html" method="post">
+        <button type="submit">Ajouter un produit</button>
+    </form>
+    <div class="container">
+        <?php
+        // Vérifier s'il y a des produits à afficher
+        if ($result->num_rows > 0) {
+            // Parcourir chaque produit
+            while($row = $result->fetch_assoc()) {
+                // Afficher les détails du produit
+                ?>
+                <div class="product">
+                    <?php
+                    // Chemin de l'image du produit
+                    $image_path = "image/" . $row['image']; 
+                    // Vérifier si le fichier image existe
+                    if (file_exists($image_path)) {
+                        // Vérifier si le fichier est lisible
+                        if (!is_readable($image_path)) {
+                            // Ajouter les droits de lecture
+                            chmod($image_path, 0644);
+                        }
+                        // Afficher l'image du produit
+                        echo '<img src="' . $image_path . '" alt="' . $row['nom'] . '">';
+                    } else {
+                        // Si le fichier n'existe pas, afficher une image par défaut
+                        echo '<img src="chemin_vers_image_par_defaut/default_image.jpg" alt="Image par défaut">';
+                    }
+                    ?>
+                    <h3><?php echo $row['nom']; ?></h3>
+                    <p><?php echo $row['description']; ?></p>
+                    <p>Prix: <?php echo $row['prix']; ?>€</p>
+                    <!-- Bouton d'ajout au panier -->
+                    
+                    <!-- Boutons de modification et suppression -->
+                    <form action="modifier_produit.php" method="post">
+                        <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                        <button type="submit">Modifier</button>
+                    </form>
+                    <form action="supprimer_produit.php" method="post">
+                        <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                        <button type="submit">Supprimer</button>
+                    </form>
+                </div>
+                <?php
+            }
+        } else {
+            echo "Aucun produit trouvé.";
+        }
+        ?>
+    </div>
+</body>
+</html>
+
+<?php
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\supprimer.php:
+
+
+C:\xampp\htdocs\ecommerce\supprimer_produit.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['product_id'])) {
+    // Récupérer l'identifiant du produit à supprimer
+    $product_id = $_POST['product_id'];
+
+    // Supprimer le produit de la base de données
+    $sql = "DELETE FROM produits WHERE id='$product_id'";
+
+    if ($conn->query($sql) === TRUE) {
+        echo "Produit supprimé avec succès.";
+    } else {
+        echo "Erreur lors de la suppression du produit: " . $conn->error;
+    }
+} else {
+    echo "Méthode non autorisée ou ID de produit non spécifié.";
+}
+
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\supprimer_produit_panier.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Vérifier si l'ID du produit à supprimer est défini dans l'URL
+if(isset($_GET['productId'])) {
+    $productId = $_GET['productId'];
+
+    // Requête SQL pour supprimer le produit du panier en fonction de son ID
+    $sql = "DELETE FROM panier WHERE product_id = $productId";
+
+    if ($conn->query($sql) === TRUE) {
+        echo "Produit supprimé du panier avec succès";
+    } else {
+        echo "Erreur lors de la suppression du produit du panier: " . $conn->error;
+    }
+} else {
+    echo "ID du produit à supprimer non spécifié";
+}
+
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\suprimer.php:
+
+
+C:\xampp\htdocs\ecommerce\traiter_modification.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Récupérer les données du formulaire
+    $product_id = $_POST['product_id'];
+    $nom = $_POST['nom'];
+    $description = $_POST['description'];
+    $prix = $_POST['prix'];
+
+    // Valider les données si nécessaire
+
+    // Mettre à jour le produit dans la base de données
+    $sql = "UPDATE produits SET nom='$nom', description='$description', prix='$prix' WHERE id='$product_id'";
+
+    if ($conn->query($sql) === TRUE) {
+        echo "Produit mis à jour avec succès.";
+    } else {
+        echo "Erreur lors de la mise à jour du produit: " . $conn->error;
+    }
+} else {
+    echo "Méthode non autorisée.";
+}
+
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\valider_panier.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Récupérer l'identifiant du client et du panier de l'utilisateur (supposons que vous les ayez stockés dans des variables $_POST)
+$clientId = $_POST['client_id'];
+$panierId = $_POST['panier_id'];
+
+// Insérer les produits du panier dans la table des commandes
+$sql = "INSERT INTO commande (client_id, panier_id) VALUES ('$clientId', '$panierId')";
+
+$stmt = $conn->prepare($sql);
+
+if ($stmt) {
+    if ($stmt->execute()) {
+        echo " La commande a été insérée avec succès";
+      
+    } else {
+        echo "Erreur lors de l'insertion de la commande: " . $stmt->error;
+    }
+    // Fermer la requête préparée
+    $stmt->close();
+} else {
+    echo "Erreur de préparation de la requête d'insertion de la commande: " . $conn->error;
+}
+
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\voir_panier.php:
+<?php
+// Placez ce code au début du fichier PHP pour initialiser la connexion à la base de données
+
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ecommerce";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Vérification de la connexion
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Récupérer les produits du panier de l'utilisateur en fonction de son ID
+ // Vous devrez remplacer cela par l'ID de l'utilisateur connecté
+$sql = "SELECT panier.product_id, produits.nom, panier.id, panier.user_id
+FROM panier
+JOIN produits ON panier.product_id = produits.id;
+
+";
+$result = $conn->query($sql);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre Panier</title>
+</head>
+<body>
+    <h2>Votre Panier</h2>
+
+    <form action="valider_panier.php" method="post">
+        <?php
+        // Vérifier s'il y a des produits dans le panier
+        if ($result->num_rows > 0) {
+            echo "<ul>";
+            // Afficher chaque produit dans le panier avec un bouton "Supprimer"
+            while ($row = $result->fetch_assoc()) {
+                echo "<li>{$row['nom']} <button type='button' onclick='deleteProduct({$row['product_id']})'>Supprimer</button></li>";
+                $panier_id = $row['id'];
+                $user_id = $row['user_id'];
+                
+            }
+
+            echo "</ul>";
+            
+            
+            echo "<input type='hidden' name='panier_id' value= $panier_id >";
+
+           
+            echo "<input type='hidden' name='client_id' value = $user_id>";
+            
+
+            echo "<button type='submit'>Valider</button>";
+        } else {
+            echo "<p>Votre panier est vide.</p>";
+        }
+        ?>
+    </form>
+
+  
+</body>
+</html>
+
+<?php
+// Fermer la connexion à la base de données
+$conn->close();
+?>
+
+
+C:\xampp\htdocs\ecommerce\image\2.png:
+Could not read file 2.png. Reason: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\image\6 9 2023.png:
+Could not read file 6 9 2023.png. Reason: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\image\Capture d’écran 2023-12-28 211449.png:
+Could not read file Capture d’écran 2023-12-28 211449.png. Reason: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\image\Capture d’écran 2024-01-11 155130.png:
+Could not read file Capture d’écran 2024-01-11 155130.png. Reason: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\image\Capture d’écran 2024-02-02 143236.png:
+Could not read file Capture d’écran 2024-02-02 143236.png. Reason: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\image\Capture d’écran 2024-03-08 123401.png:
+Could not read file Capture d’écran 2024-03-08 123401.png. Reason: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\image\WIN_20230906_00_50_28_Pro.jpg:
+Could not read file WIN_20230906_00_50_28_Pro.jpg. Reason: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\image\WIN_20230909_15_41_16_Pro.jpg:
+Could not read file WIN_20230909_15_41_16_Pro.jpg. Reason: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\image\WIN_20231109_12_21_56_Pro.jpg:
+Could not read file WIN_20231109_12_21_56_Pro.jpg. Reason: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte
+
+C:\xampp\htdocs\ecommerce\image\WIN_20231202_22_04_03_Pro.jpg:
+Could not read file WIN_20231202_22_04_03_Pro.jpg. Reason: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte
+

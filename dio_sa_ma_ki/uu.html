@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu déroulant</title>
+    <style> 
+        /* Style pour le conteneur du header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 0;
+            background-color:rgb(75, 205, 162); /* Fond blanc pour le header */
+            padding: 10px 20px;
+            z-index: 1000; /* Assure que le header reste au-dessus de tout le contenu */
+        }
+ 
+        /* Style pour les éléments à gauche */
+        .left-container {
+            display: flex;
+            align-items: center;
+        }
+        /* Style pour les liens "My Account" */
+        .wsshopmyaccount-container {
+            display: flex; /* Permet d'aligner les liens sur une même ligne */
+        }
+        .wsshopmyaccount {
+            position: relative;
+            margin-right: 20px; 
+            display: inline-block;/* Espacement entre les liens "My Account" */
+        }
+        .wsshopmyaccount:last-child {
+            margin-right: 0; /* Pour supprimer l'espace à droite du dernier lien */
+        }
+        .sub-menu {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            min-width: 160px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 12px 0;
+            z-index: 1;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+        .wsshopmyaccount:hover .sub-menu {
+            display: block;
+        }
+        /* Style pour le lien "My Account" */
+        .wsshopmyaccount a {
+            text-decoration: none;
+            color: #333;
+        }
+        /* Style pour le sous-menu */
+        .sub-menu li {
+            list-style-type: none;
+            margin: 5px 0;
+        }
+        .sub-menu li a {
+            color: #333;
+            text-decoration: none;
+            display: block;
+            padding: 8px 16px;
+            transition: background-color 0.3s;
+        }
+        .sub-menu li a:hover {
+            background-color: #f5f5f5;
+        }
+        /* Barre de recherche */
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+        .search-container input[type="text"] {
+            padding: 5px;
+            margin-right: 10px;
+            
+        }
+       .logo1{ width: 60px; /* Augmenter la taille du logo */
+    height: 60px;
+    border-radius: 50%; /* Rendre le logo rond */
+    object-fit: cover; /* Assurer que l'image s'adapte bien dans le cadre rond */
+    margin-right: 20px; /* Espacement entre les éléments */
+}
+.logo2{ width: 50px; /* Augmenter la taille du logo */
+    height: 50px;
+    border-radius: 50%; /* Rendre le logo rond */
+    object-fit: cover; /* Assurer que l'image s'adapte bien dans le cadre rond */
+    margin-right: 20px; /* Espacement entre les éléments */
+}
+.logo3{ width: 50px; /* Augmenter la taille du logo */
+    height: 50px;
+    border-radius: 50%; /* Rendre le logo rond */
+    object-fit: cover; /* Assurer que l'image s'adapte bien dans le cadre rond */
+    margin-right: 20px; /* Espacement entre les éléments */
+}
+.logo4{ width: 50px; /* Augmenter la taille du logo */
+    height: 50px;
+    border-radius: 50%; /* Rendre le logo rond */
+    object-fit: cover; /* Assurer que l'image s'adapte bien dans le cadre rond */
+    margin-right: 20px; /* Espacement entre les éléments */
+}
+.q{
+  
+   
+    width: 2cm; /* Largeur du span */
+    height: 0,6cm; /* Hauteur du span égale à 100% de la hauteur de l'écran */
+    background-color:rgb(211, 78, 211); /* Couleur de fond du span */
+   ; /* Bordures arrondies */
+   
+  /* Assure que le span est placé en arrière-plan */
+}
+.liste-cachée {
+    display: none; /* Cache la liste initialement */
+    position: absolute; /* Position absolue pour positionner la liste par rapport à l'image */
+    top: 100%; /* Positionne la liste en dessous de l'image */
+    left: 0; /* Aligne la liste sur la gauche de l'image */
+    background-color: white; /* Couleur de fond de la liste */
+    padding: 10px; /* Ajoute un peu de marge intérieure à la liste */
+    border: 1px solid #ccc; /* Ajoute une bordure à la liste */
+}
+
+.container {
+    position: relative; /* Nécessaire pour positionner la liste par rapport à l'image */
+}
+
+.container:hover .liste-cachée {
+    display: block; /* Affiche la liste lorsque le conteneur est survolé */
+}
+
+
+    </style>
+</head>
+<body>
+    <div class="header">
+    
+        <!-- Conteneur pour les éléments à gauche -->
+        <div class="left-container">
+            <!-- Logos -->
+          
+           <div class="container">
+            <img class="logo1" src="diosa.jpeg" alt="Logo 1" style="margin-right: 10px;" id="logo-clickable">
+            <ul class="sub-menu" id="liste-cachée">
+                <li><a href="#">voir profile</a></li>
+                <li><a href="#">notification</a></li>
+                <li><a href="#">se deconnecter</a></li>
+            </ul>
+        </div>
+        
+            <!-- Liens "My Account" -->
+            <div class="wsshopmyaccount-container">
+                <ul>
+                    <li class="wsshopmyaccount">
+                        <span class="q"><a href="#">categorie</a></span>
+                        <ul class="sub-menu">
+                            <li><a href="#">Vêtements</a></li>
+                            <li><a href="#">Chaussures</a></li>
+                            <li><a href="#">Accessoires</a></li>
+                            <li><a href="#"> Électroniques</a></li>
+                            <li><a href="#">Beauté et sante</a></li>
+                        </ul>
+                    </li>
+                    <li class="wsshopmyaccount">
+                      <span class="q"><a href="#">prix</a></span>
+                        <ul class="sub-menu">
+                            <li><a href="#"> 0-50</a></li>
+                            <li><a href="#">51-100</a></li>
+                            <li><a href="#">101-150</a></li>
+                            <li><a href="#">151-200</a></li>
+                            <li><a href="#">plus de 200</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <!-- Barre de recherche -->
+        <div class="search-container">
+            <input type="text" placeholder="Search...">
+            <button>Search</button>
+        </div>
+        <!-- Logos -->
+        <div class="right-container">
+            <img  class="logo3" src="logo2.jpeg" alt="Logo 3" style="margin-left: 10px;">
+            <img class="logo4" src="logo3.jpeg" alt="Logo 4" style="margin-left: 10px;">
+            <img  class="logo2" src="diosa.jpeg" alt="Logo 2" style="margin-right: 10px;">
+        </div>
+    </div>
+<script>
+    <!-- Ajoutez ici les liens ou le contenu de votre page -->
+    document.getElementById("logo-clickable").addEventListener("click", function() {
+      var listeCachée = document.getElementById("liste-cachée");
+      if (listeCachée.style.display === "none") {
+          listeCachée.style.display = "block"; /* Affiche la liste si elle est cachée */
+      } else {
+          listeCachée.style.display = "none"; /* Cache la liste si elle est affichée */
+      }
+  });
+</script>
+</body>
+</html>

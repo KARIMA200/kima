@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        /* Styles CSS précédents restent inchangés */
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="user-avatar">
+                <img src="avatar.jpg" alt="Avatar">
+            </div>
+            <span>Vendeur: John Doe</span>
+        </div>
+        <div class="chat-messages">
+            <!-- Messages à afficher seront ajoutés ici via JavaScript -->
+        </div>
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Type your message...">
+            <button id="sendMessageBtn">Send</button>
+            <div class="attachment-icons">
+                <img src="attachment-icon-image.png" alt="Attachment icon" id="uploadImageBtn">
+                <img src="attachment-icon-voice.png" alt="Attachment icon" id="sendVoiceBtn">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageBtn = document.getElementById('sendMessageBtn');
+
+        sendMessageBtn.addEventListener('click', () => {
+            const message = messageInput.value.trim();
+            const destinataire = "John Doe"; // Remplacez 'John Doe' par le destinataire réel
+            if (message !== '') {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'envoyer_message.php');
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        appendMessage('You', message);
+                        messageInput.value = '';
+                    } else {
+                        console.error('Erreur lors de l\'envoi du message.');
+                    }
+                };
+                const data = `message=${encodeURIComponent(message)}&destinataire=${encodeURIComponent(destinataire)}`;
+                xhr.send(data);
+            }
+        });
+
+        function appendMessage(sender, message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message');
+            messageElement.innerHTML = `<span class="message-sender">${sender}:</span><span class="message-body">${message}</span>`;
+            document.querySelector('.chat-messages').appendChild(messageElement);
+        }
+    </script>
+    </body></html> 
+        <?php
+    session_start();
+    // Vérifiez si l'utilisateur est connecté
+    if (!isset($_SESSION["email"])) {
+        http_response_code(403);
+        exit("Vous devez être connecté pour envoyer un message.");
+    }
+    
+    // Récupérez les données du message et du destinataire
+    $message = $_POST["message"];
+    $destinataire = $_POST["destinataire"];
+    
+    // Connexion à la base de données
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "votre_base_de_donnees";
+    
+    $conn = new mysqli($servername, $username, $password, $dbname);
+    
+    // Vérifiez la connexion à la base de données
+    if ($conn->connect_error) {
+        http_response_code(500);
+        exit("Erreur de connexion à la base de données: " . $conn->connect_error);
+    }
+    
+    // Préparez la requête SQL pour insérer le message dans la base de données
+    $sql = "INSERT INTO messages (expediteur, destinataire, contenu) VALUES (?, ?, ?)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sss", $_SESSION["email"], $destinataire, $message);
+    
+    // Exécutez la requête SQL
+    if ($stmt->execute()) {
+        http_response_code(200);
+        exit("Message envoyé avec succès.");
+    } else {
+        http_response_code(500);
+        exit("Erreur lors de l'envoi du message: " . $conn->error);
+    }
+    
+    // Fermez la connexion à la base de données
+    $stmt->close();
+    $conn->close();
+    ?>
+    

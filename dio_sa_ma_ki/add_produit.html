@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter Produit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .container {
+            border: 3px solid #4bcdA2;
+            border-radius: 10px;
+            max-width: 13cm;
+            width: 90%;
+            padding: 20px;
+        }
+        .form-container {
+            border: 1px solid #4bcdA2;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+            width: 10cm;
+            height: 13cm;
+        }
+        .form-container h4 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .form-container input[type="text"],
+        .form-container textarea,
+        .form-container select,
+        .form-container input[type="number"],
+        .form-container input[type="submit"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #4bcdA2;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+            outline: none;
+        }
+        .form-container select {
+            height: 40px;
+        }
+        .form-container input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            border: 2px solid #4bcdA2;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #fff;
+            color: #4bcdA2;
+        }
+        .form-container input[type="submit"] {
+            background-color: #4bcdA2;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .form-container input[type="submit"]:hover {
+            background-color: #3aa383;
+        }
+        .form-group {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+        <div class="form-container">
+            <h4>Ajouter un Nouveau Produit</h4>
+            <form action="add_produit.php" method="post" enctype="multipart/form-data">
+                <input type="text" id="nom_produit" name="nom_produit" placeholder="Nom du Produit" required><br>
+                <textarea id="description_produit" name="description_produit" placeholder="Description du Produit" required></textarea><br>
+                <input type="text" id="prix_produit" name="prix_produit" placeholder="Prix du Produit" required><br><br>
+                <input type="number" id="stock" name="stock" placeholder="Stock du Produit" min="0" required><br><br>
+                <div class="form-group">
+                    <select id="categorie" name="categorie" required>
+                        <option value="vetements">Vetements</option>
+                        <option value="chaussures">Chaussures</option>
+                        <option value="accessoires">Accessoires</option>
+                        <option value="electroniques">Électroniques</option>
+                        <option value="baute et sante">Beaute et Sante</option>
+                    </select>
+                    <label for="image" class="custom-file-upload">
+                        <i class="far fa-file-image"></i> image
+                    </label>
+                    <input type="file" id="image" name="image" required>
+                </div>
+                <input type="submit" value="Ajouter le Produit">
+            </form>
+        </div>
+  
+</body>
+</html>
